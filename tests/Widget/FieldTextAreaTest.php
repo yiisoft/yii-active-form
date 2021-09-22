@@ -4,69 +4,165 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\TypeForm;
+use Yiisoft\Form\Tests\TestSupport\TestTrait;
 use Yiisoft\Form\Widget\Field;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class FieldTextAreaTest extends TestCase
 {
-    public function testFieldsTextArea(): void
+    use TestTrait;
+
+    private TypeForm $formModel;
+
+    public function testDirname(): void
     {
-        $data = new PersonalForm();
-        $data->address('San Petesburgo, Rusia');
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-address">
-<label class="control-label" for="personalform-address">Address</label>
-<textarea id="personalform-address" class="form-control" name="PersonalForm[address]" placeholder="Address">San Petesburgo, Rusia</textarea>
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" placeholder="Typed your text string." dirname="test.dir"></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['dirname' => 'test.dir'])->render(),
+        );
+    }
 
-<div class="help-block"></div>
-</div>
-HTML;
+    public function testDirnameException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The value cannot be empty.');
+        Field::widget()->config($this->formModel, 'string')->textArea(['dirname' => ''])->render();
+    }
+
+    public function testForm(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" form="form-id" placeholder="Typed your text string."></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['form' => 'form-id'])->render(),
+        );
+    }
+
+    public function testMaxLength(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" maxLength="100" placeholder="Typed your text string."></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['maxLength' => 100])->render(),
+        );
+    }
+
+    public function testPlaceholder(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" placeholder="PlaceHolder Text"></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'address')
-            ->textArea()
-            ->run();
+            ->config($this->formModel, 'string')
+            ->textArea(['placeholder' => 'PlaceHolder Text'])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
     }
 
-    public function testFieldsTextAreaWithLabelCustom(): void
+    public function testRender(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-address">
-<label class="control-label customClass" for="personalform-address">Address:</label>
-<textarea id="personalform-address" class="form-control" name="PersonalForm[address]" placeholder="Address"></textarea>
-
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'address')
-            ->label(true, ['class' => 'customClass'], 'Address:')
-            ->textArea()
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" placeholder="Typed your text string."></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea()->render(),
+        );
     }
 
-    public function testFieldsTextAreaAnyLabel(): void
+    public function testTextAreaReadOnly(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-address">
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" readonly placeholder="Typed your text string."></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['readonly' => true])->render(),
+        );
+    }
 
-<textarea id="personalform-address" class="form-control" name="PersonalForm[address]" placeholder="Address"></textarea>
+    public function testValueException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('TextArea widget must be a string.');
+        Field::widget()->config($this->formModel, 'array')->textArea()->render();
+    }
 
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'address')
-            ->label(false)
-            ->textArea()
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+    public function testWrap(): void
+    {
+        /** hard value */
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" placeholder="Typed your text string." wrap="hard"></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['wrap' => 'hard'])->render(),
+        );
+
+        /** soft value */
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <textarea id="typeform-string" name="TypeForm[string]" placeholder="Typed your text string." wrap="soft"></textarea>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->textArea(['wrap' => 'soft'])->render(),
+        );
+    }
+
+    public function testWrapException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid wrap value. Valid values are: hard, soft.');
+        Field::widget()->config($this->formModel, 'string')->textArea(['wrap' => 'exception']);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new TypeForm();
     }
 }

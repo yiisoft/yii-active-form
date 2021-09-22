@@ -4,109 +4,79 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\Stub\ValidatorMock;
-use Yiisoft\Form\Tests\TestCase;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\PersonalForm;
+use Yiisoft\Form\Tests\TestSupport\Validator\ValidatorMock;
 use Yiisoft\Form\Widget\Error;
+use Yiisoft\Test\Support\Container\SimpleContainer;
 use Yiisoft\Validator\ValidatorInterface;
+use Yiisoft\Widget\WidgetFactory;
 
 final class ErrorTest extends TestCase
 {
-    private PersonalForm $data;
     private array $record = [];
+    private PersonalForm $formModel;
+
+    public function testImmutability(): void
+    {
+        $error = Error::widget();
+        $this->assertNotSame($error, $error->message(''));
+        $this->assertNotSame($error, $error->messageCallback([]));
+        $this->assertNotSame($error, $error->tag());
+    }
+
+    public function testMessage(): void
+    {
+        $html = Error::widget()->config($this->formModel, 'name')->message('This is custom error message.')->render();
+        $this->assertSame('<div>This is custom error message.</div>', $html);
+    }
+
+    public function testMessageCallback(): void
+    {
+        $html = Error::widget()
+            ->config($this->formModel, 'name')
+            ->messageCallback([$this->formModel, 'customError'])
+            ->render();
+        $this->assertSame('<div>This is custom error message.</div>', $html);
+    }
+
+    public function testMessageCallbackWithNoEncode(): void
+    {
+        $html = Error::widget()
+            ->config($this->formModel, 'name', ['encode' => false])
+            ->messageCallback([$this->formModel, 'customErrorWithIcon'])
+            ->render();
+        $this->assertSame('<div>(&#10006;) This is custom error message.</div>', $html);
+    }
+
+    public function testRender(): void
+    {
+        $this->assertSame(
+            '<div>Value cannot be blank.</div>',
+            Error::widget()->config($this->formModel, 'name')->render(),
+        );
+    }
+
+    public function testTag(): void
+    {
+        $this->assertSame(
+            'Value cannot be blank.',
+            Error::widget()->config($this->formModel, 'name')->tag()->render(),
+        );
+        $this->assertSame(
+            '<span>Value cannot be blank.</span>',
+            Error::widget()->config($this->formModel, 'name')->tag('span')->render(),
+        );
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->data = new PersonalForm();
-        $this->record = [
-            'PersonalForm' =>
-            [
-                'name' => null,
-            ],
-        ];
-    }
-
-    public function testError(): void
-    {
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new PersonalForm();
+        $this->formModel->load(['PersonalForm' => ['name' => '']]);
         $validator = $this->createValidatorMock();
-        $this->data->load($this->record);
-
-        $validator->validate($this->data);
-
-        $expected = '<div>Value cannot be blank.</div>';
-        $html = Error::widget()
-            ->config($this->data, 'name')
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testErrorOptions(): void
-    {
-        $validator = $this->createValidatorMock();
-        $this->data->load($this->record);
-
-        $validator->validate($this->data);
-
-        $expected = '<div class="customClass">Value cannot be blank.</div>';
-        $html = Error::widget()
-            ->config($this->data, 'name', ['class' => 'customClass'])
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testErrorErrorSource(): void
-    {
-        $validator = $this->createValidatorMock();
-        $this->data->load($this->record);
-
-        $validator->validate($this->data);
-
-        $expected = '<div>This is custom error message.</div>';
-        $html = Error::widget()
-            ->config($this->data, 'name')
-            ->errorSource([$this->data, 'customError'])
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testErrorNoEncode(): void
-    {
-        $validator = $this->createValidatorMock();
-        $this->data->load($this->record);
-
-        $validator->validate($this->data);
-
-        $expected = '<div>(&#10006;) This is custom error message.</div>';
-        $html = Error::widget()
-            ->config($this->data, 'name')
-            ->errorSource([$this->data, 'customErrorWithIcon'])
-            ->noEncode()
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testErrorTag(): void
-    {
-        $validator = $this->createValidatorMock();
-        $this->data->load($this->record);
-
-        $validator->validate($this->data);
-
-        $expected = 'Value cannot be blank.';
-        $html = Error::widget()
-            ->config($this->data, 'name')
-            ->tag()
-            ->run();
-        $this->assertEquals($expected, $html);
-
-        $expected = '<span>Value cannot be blank.</span>';
-        $html = Error::widget()
-            ->config($this->data, 'name')
-            ->tag('span')
-            ->run();
-        $this->assertEquals($expected, $html);
+        $validator->validate($this->formModel);
     }
 
     private function createValidatorMock(): ValidatorInterface

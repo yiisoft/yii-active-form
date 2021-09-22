@@ -4,65 +4,68 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\TypeForm;
+use Yiisoft\Form\Tests\TestSupport\TestTrait;
 use Yiisoft\Form\Widget\Field;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class FieldHintTest extends TestCase
 {
-    public function testFieldsHint(): void
-    {
-        $data = new PersonalForm();
+    use TestTrait;
 
+    private TypeForm $formModel;
+
+    public function testAnyHint(): void
+    {
         $expected = <<<'HTML'
-<div class="form-group field-personalform-name">
-<label class="control-label required" for="personalform-name">Name</label>
-<input type="text" id="personalform-name" class="form-control" name="PersonalForm[name]" placeholder="Name">
-<div class="hint-block">Write your first name.</div>
-<div class="help-block"></div>
-</div>
-HTML;
+        <div>
+        <label for="typeform-string">String</label>
+        <input type="text" id="typeform-string" name="TypeForm[string]" value placeholder="Typed your text string.">
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->hint(['hint' => false])->render(),
+        );
+    }
+
+    public function testHintCustom(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label for="typeform-string">String</label>
+        <input type="text" id="typeform-string" name="TypeForm[string]" value placeholder="Typed your text string.">
+        <div class="test-class">Custom hint text.</div>
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'name')
-            ->run();
+            ->config($this->formModel, 'string')
+            ->hint(['class' => 'test-class', 'hint' => 'Custom hint text.'])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
     }
 
-    public function testFieldHintCustom(): void
+    public function testRender(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-name">
-<label class="control-label required" for="personalform-name">Name</label>
-<input type="text" id="personalform-name" class="form-control" name="PersonalForm[name]" placeholder="Name">
-<div class="hint-block customClass">Custom hint.</div>
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'name')
-            ->hint('Custom hint.', true, ['class' => 'customClass'])
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        <div>
+        <label for="typeform-string">String</label>
+        <input type="text" id="typeform-string" name="TypeForm[string]" value placeholder="Typed your text string.">
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->render(),
+        );
     }
 
-    public function testFieldAnyHint(): void
+    protected function setUp(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<div class="form-group field-personalform-name">
-<label class="control-label required" for="personalform-name">Name</label>
-<input type="text" id="personalform-name" class="form-control" name="PersonalForm[name]" placeholder="Name">
-
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'name')
-            ->hint(null, false)
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new TypeForm();
     }
 }

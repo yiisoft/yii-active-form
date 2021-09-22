@@ -4,68 +4,53 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Widget;
 
-use Yiisoft\Arrays\ArrayHelper;
+use JsonException;
 use Yiisoft\Form\FormModelInterface;
 use Yiisoft\Html\Html;
+use Yiisoft\Html\Tag\CustomTag;
 use Yiisoft\Widget\Widget;
+
 use function array_merge;
 use function array_unique;
 use function array_values;
 
+/**
+ * The error summary widget displays a summary of the errors in a form.
+ *
+ * @psalm-suppress MissingConstructor
+ */
 final class ErrorSummary extends Widget
 {
-    private FormModelInterface $data;
-    private array $options = [];
+    private array $attributes = [];
+    private FormModelInterface $formModel;
 
     /**
-     * Generates a summary of the validation errors.
+     * The HTML attributes. The following special options are recognized.
      *
-     * @throws \JsonException
+     * @param array $value
      *
-     * @return string the generated error summary
+     * @return static
+     *
+     * See {@see Html::renderTagAttributes()} for details on how attributes are being rendered.
      */
-    public function run(): string
+    public function attributes(array $value): self
     {
         $new = clone $this;
-
-        $header = $new->options['header'] ?? '<p>' . 'Please fix the following errors:' . '</p>';
-        $footer = ArrayHelper::remove($new->options, 'footer', '');
-        $encode = ArrayHelper::remove($new->options, 'encode', true);
-        $showAllErrors = ArrayHelper::remove($new->options, 'showAllErrors', false);
-
-        unset($new->options['header']);
-
-        $lines = $new->collectErrors($encode, $showAllErrors);
-
-        if (empty($lines)) {
-            /** still render the placeholder for client-side validation use */
-            $content = '<ul></ul>';
-            $new->options['style'] = isset($new->options['style'])
-                ? rtrim((string)$new->options['style'], ';') . '; display:none' : 'display:none';
-        } else {
-            $content = '<ul><li>' . implode("</li>\n<li>", $lines) . '</li></ul>';
-        }
-
-        return Html::tag('div', $header . $content . $footer)
-            ->attributes($new->options)
-            ->encode(false)
-            ->render();
+        $new->attributes = $value;
+        return $new;
     }
 
     /**
-     * Set form model, name and options for the widget.
+     * Set model class name.
      *
-     * @param FormModelInterface $data Form model.
-     * @param array $options The HTML attributes for the widget container tag.
-     * See {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @param string $class name of model.
      *
-     * @return self
+     * @return static
      */
-    public function config(FormModelInterface $data, array $options = []): self
+    public function model(FormModelInterface $formModel): self
     {
         $new = clone $this;
-        $new->data = $data;
-        $new->options = $options;
+        $new->formModel = $formModel;
         return $new;
     }
 
@@ -84,7 +69,7 @@ final class ErrorSummary extends Widget
 
         $lines = [];
 
-        foreach ([$new->data] as $form) {
+        foreach ([$new->formModel] as $form) {
             $lines = array_unique(array_merge($lines, $form->getErrorSummary($showAllErrors)));
         }
 
@@ -95,11 +80,65 @@ final class ErrorSummary extends Widget
         $lines = array_values($lines);
 
         if ($encode) {
+            /** @var string $line */
             foreach ($lines as &$line) {
                 $line = Html::encode($line);
             }
         }
 
         return $lines;
+    }
+
+    /**
+     * Generates a summary of the validation errors.
+     *
+     * @throws JsonException
+     *
+     * @return string the generated error summary
+     */
+    protected function run(): string
+    {
+        $new = clone $this;
+
+        /** @var bool */
+        $encode = $new->attributes['encode'] ?? true;
+
+        /** @var string */
+        $footer = $new->attributes['footer'] ?? '';
+
+        /** @var string */
+        $header = $new->attributes['header'] ?? '<p>' . 'Please fix the following errors:' . '</p>';
+
+        /** @var bool */
+        $showAllErrors = $new->attributes['showAllErrors'] ?? false;
+
+        /** @psalm-var non-empty-string */
+        $tag = $new->attributes['tag'] ?? 'div';
+
+        unset(
+            $new->attributes['encode'],
+            $new->attributes['footer'],
+            $new->attributes['header'],
+            $new->attributes['showAllErrors'],
+            $new->attributes['tag'],
+        );
+
+        /** @var array<string, string> */
+        $lines = $new->collectErrors($encode, $showAllErrors);
+
+        if (empty($lines)) {
+            /** still render the placeholder for client-side validation use */
+            $content = '<ul></ul>';
+            $new->attributes['style'] = isset($new->attributes['style'])
+                ? rtrim((string)$new->attributes['style'], ';') . '; display:none' : 'display:none';
+        } else {
+            $content = '<ul><li>' . implode("</li>\n<li>", $lines) . '</li></ul>';
+        }
+
+        return CustomTag::name($tag)
+            ->attributes($new->attributes)
+            ->encode(false)
+            ->content($header . $content . $footer)
+            ->render();
     }
 }

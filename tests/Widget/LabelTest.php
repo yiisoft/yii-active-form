@@ -4,63 +4,62 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\TypeForm;
 use Yiisoft\Form\Widget\Label;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class LabelTest extends TestCase
 {
+    private TypeForm $formModel;
+
+    /**
+     * @link https://github.com/yiisoft/form/issues/85
+     */
+    public function testEncodeFalse(): void
+    {
+        $this->assertSame(
+            '<label for="typeform-string">My&nbsp;Field</label>',
+            Label::widget()->config($this->formModel, 'string', ['encode' => false])->label('My&nbsp;Field')->render(),
+        );
+    }
+
+    public function testFor(): void
+    {
+        $this->assertSame(
+            '<label for="for-id">String</label>',
+            Label::widget()->config($this->formModel, 'string')->for('for-id')->render(),
+        );
+    }
+
+    public function testImmutability(): void
+    {
+        $label = Label::widget();
+        $this->assertNotSame($label, $label->for(''));
+        $this->assertNotSame($label, $label->label(''));
+    }
+
     public function testLabel(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<label for="personalform-name">Name</label>
-HTML;
-        $html = Label::widget()
-            ->config($data, 'name')
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<label for="typeform-string">Label:</label>',
+            Label::widget()->config($this->formModel, 'string')->label('Label:')->render(),
+        );
     }
 
-    public function testLabelOptions(): void
+    public function testRender(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<label class="customClass" for="personalform-name">Name</label>
-HTML;
-        $html = Label::widget()
-            ->config($data, 'name', ['class' => 'customClass'])
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<label for="typeform-string">String</label>',
+            Label::widget()->config($this->formModel, 'string')->render(),
+        );
     }
 
-    public function testLabelFor(): void
+    protected function setUp(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<label for="for-id">Name</label>
-HTML;
-        $html = Label::widget()
-            ->config($data, 'name')
-            ->for('for-id')
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testLabelCustomLabel(): void
-    {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<label for="personalform-name">Firts Name:</label>
-HTML;
-        $html = Label::widget()
-            ->config($data, 'name')
-            ->label('Firts Name:')
-            ->run();
-        $this->assertEquals($expected, $html);
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new TypeForm();
     }
 }

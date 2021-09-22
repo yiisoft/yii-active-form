@@ -5,57 +5,132 @@ declare(strict_types=1);
 namespace Yiisoft\Form\Widget;
 
 use Closure;
-use Yiisoft\Form\FormModelInterface;
+use InvalidArgumentException;
+use Stringable;
+use Yiisoft\Arrays\ArrayHelper;
+use Yiisoft\Form\Helper\HtmlForm;
+use Yiisoft\Form\Widget\Attribute\ModelAttributes;
 use Yiisoft\Html\Widget\RadioList\RadioItem;
+use Yiisoft\Html\Widget\RadioList\RadioList as RadioListTag;
 use Yiisoft\Widget\Widget;
 
+/**
+ * Generates a list of radio.
+ */
 final class RadioList extends Widget
 {
-    private FormModelInterface $data;
-    private string $attribute;
-    private array $options = [];
+    use ModelAttributes;
+
+    private array $containerAttributes = [];
+    private ?string $containerTag = 'div';
+    /** @psalm-var array<array-key, array<array-key, mixed>> */
+    private array $individualItemsAttributes = [];
+    /** @psalm-var array<array-key, string> */
     private array $items = [];
-    private bool $noUnselect = false;
+    private array $itemsAttributes = [];
+    /** @psalm-var Closure(RadioItem):string|null */
+    private ?Closure $itemsFormatter = null;
+    private string $separator = '';
 
     /**
-     * @psalm-var Closure(RadioItem):string|null
-     */
-    private ?Closure $itemFormatter = null;
-
-    /**
-     * Generates a list of radio buttons.
+     * The container attributes for generating the list of checkboxes tag using {@see CheckBoxList}.
      *
-     * A radio button list is like a checkbox list, except that it only allows single selection.
+     * @param array $value
      *
-     * @return string the generated radio button list
+     * @return static
+     *
+     * {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
      */
-    public function run(): string
+    public function containerAttributes(array $value): self
     {
-        return ListInput::widget()
-            ->type('radioList')
-            ->config($this->data, $this->attribute, $this->options)
-            ->items($this->items)
-            ->item($this->itemFormatter)
-            ->noUnselect($this->noUnselect)
-            ->run();
+        $new = clone $this;
+        $new->containerAttributes = $value;
+        return $new;
     }
 
     /**
-     * Set form model, name and options for the widget.
+     * The tag name for the container element.
      *
-     * @param FormModelInterface $data Form model.
-     * @param string $attribute Form model property this widget is rendered for.
-     * @param array $options The HTML attributes for the widget container tag.
-     * See {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
+     * @param string|null $value tag name. if `null` disabled rendering.
      *
-     * @return self
+     * @return static
      */
-    public function config(FormModelInterface $data, string $attribute, array $options = []): self
+    public function containerTag(?string $name = null): self
     {
         $new = clone $this;
-        $new->data = $data;
-        $new->attribute = $attribute;
-        $new->options = $options;
+        $new->containerTag = $name;
+        return $new;
+    }
+
+    /**
+     * Set whether the element is disabled or not.
+     *
+     * If this attribute is set to `true`, the element is disabled. Disabled elements are usually drawn with grayed-out
+     * text.
+     * If the element is disabled, it does not respond to user actions, it cannot be focused, and the command event
+     * will not fire. In the case of form elements, it will not be submitted. Do not set the attribute to true, as
+     * this will suggest you can set it to false to enable the element again, which is not the case.
+     *
+     * @param bool $value
+     *
+     * @return static
+     *
+     * @link https://www.w3.org/TR/html52/sec-forms.html#element-attrdef-disabledformelements-disabled
+     */
+    public function disabled(bool $value = true): self
+    {
+        $new = clone $this;
+        $new->itemsAttributes['disabled'] = $value;
+        return $new;
+    }
+
+    /**
+     * The specified attributes for items.
+     *
+     * @param array $value
+     *
+     * @return static
+     *
+     * @psalm-param array<array-key, array<array-key, mixed>> $value
+     */
+    public function individualItemsAttributes(array $value = []): self
+    {
+        $new = clone $this;
+        $new->individualItemsAttributes = $value;
+        return $new;
+    }
+
+    /**
+     * The data used to generate the list of radios.
+     *
+     * The array keys are the list of radio values, and the array values are the corresponding labels.
+     *
+     * Note that the labels will NOT be HTML-encoded, while the values will.
+     *
+     * @param array $value
+     *
+     * @return static
+     *
+     * @psalm-param array<array-key, string> $value
+     */
+    public function items(array $value = []): self
+    {
+        $new = clone $this;
+        $new->items = $value;
+        return $new;
+    }
+
+    /**
+     * The attributes for generating the list of radio tag using {@see RadioList}.
+     *
+     * @param array $value
+     *
+     * @return static
+     */
+    public function itemsAttributes(array $value = []): self
+    {
+        $new = clone $this;
+        $new->itemsAttributes = $value;
         return $new;
     }
 
@@ -69,76 +144,31 @@ final class RadioList extends Widget
      * function ($index, $label, $name, $checked, $value)
      * ```
      *
-     * @param Closure $formatter
+     * @param Closure $value
      *
-     * @return self
+     * @return static
+     *
+     * @psalm-param Closure(RadioItem):string|null $value
      */
-    public function item(?Closure $formatter): self
+    public function itemsFormatter(?Closure $value): self
     {
         $new = clone $this;
-        $new->itemFormatter = $formatter;
+        $new->itemsFormatter = $value;
         return $new;
     }
 
     /**
-     * The data used to generate the list of radios.
+     * The readonly attribute is a boolean attribute that controls whether or not the user can edit the form control.
+     * When specified, the element is not mutable.
      *
-     * The array keys are the list of radio values, and the array values are the corresponding labels.
+     * @return static
      *
-     * Note that the labels will NOT be HTML-encoded, while the values will.
-     *
-     * @param array $value
-     *
-     * @return self
+     * @link https://html.spec.whatwg.org/multipage/input.html#attr-input-readonly
      */
-    public function items(array $value = []): self
+    public function readonly(): self
     {
         $new = clone $this;
-        $new->items = $value;
-        return $new;
-    }
-
-    /**
-     * The options for generating the list of radio tag using {@see RadioList}.
-     *
-     * @param array $value
-     *
-     * @return self
-     */
-    public function itemOptions(array $value = []): self
-    {
-        $new = clone $this;
-        $new->options['itemOptions'] = $value;
-        return $new;
-    }
-
-    /**
-     * Whether to HTML-encode the list of radio labels.
-     *
-     * Defaults to true. This option is ignored if item option is set.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function noEncode(bool $value = false): self
-    {
-        $new = clone $this;
-        $new->options['itemOptions']['encode'] = $value;
-        return $new;
-    }
-
-    /**
-     * Allows you to disable the widgets hidden input tag.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function noUnselect(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->noUnselect = $value;
+        $new->itemsAttributes['readonly'] = true;
         return $new;
     }
 
@@ -147,45 +177,54 @@ final class RadioList extends Widget
      *
      * @param string $value
      *
-     * @return self
+     * @return static
      */
     public function separator(string $value = ''): self
     {
         $new = clone $this;
-        $new->options['separator'] = $value;
+        $new->separator = $value;
         return $new;
     }
 
     /**
-     * The tag name of the container element.
+     * Generates a list of radio buttons.
      *
-     * Null to render list of radio without container {@see Html::tag()}.
+     * A radio button list is like a checkbox list, except that it only allows single selection.
      *
-     * @param string|null $value
-     *
-     * @return self
+     * @return string the generated radio button list
      */
-    public function tag(?string $value = null): self
+    protected function run(): string
     {
         $new = clone $this;
-        $new->options['tag'] = $value;
-        return $new;
-    }
+        $radioList = RadioListTag::create(HtmlForm::getInputName($new->getFormModel(), $new->attribute));
 
-    /**
-     * The value that should be submitted when none of the list of radio is selected.
-     *
-     * You may set this option to be null to prevent default value submission. If this option is not set, an empty
-     * string will be submitted.
-     *
-     * @param string $value
-     *
-     * @return self
-     */
-    public function unselect(string $value = ''): self
-    {
-        $new = clone $this;
-        $new->options['unselect'] = $value;
-        return $new;
+        /** @var string */
+        $new->containerAttributes['id'] = $new->containerAttributes['id'] ?? $new->getId();
+
+        /** @var bool|float|int|string|Stringable|null */
+        $forceUncheckedValue = ArrayHelper::remove($new->attributes, 'forceUncheckedValue', null);
+
+        /** @var iterable<int, scalar|Stringable>|scalar|Stringable|null */
+        $value = HtmlForm::getAttributeValue($new->getFormModel(), $new->attribute);
+
+        if (!is_scalar($value)) {
+            throw new InvalidArgumentException('RadioList widget required bool|float|int|string|null.');
+        }
+
+        if ($new->separator !== '') {
+            $radioList = $radioList->separator($new->separator);
+        }
+
+        return $radioList
+            ->containerAttributes($new->containerAttributes)
+            ->containerTag($new->containerTag)
+            ->individualInputAttributes($new->individualItemsAttributes)
+            ->itemFormatter($new->itemsFormatter)
+            ->items($new->items)
+            ->radioAttributes($new->attributes)
+            ->replaceRadioAttributes($new->itemsAttributes)
+            ->uncheckValue($forceUncheckedValue)
+            ->value((int) $value)
+            ->render();
     }
 }

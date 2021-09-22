@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace Yiisoft\Form\Tests;
 
 use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
 use Yiisoft\Form\FormModel;
-use Yiisoft\Form\Tests\Stub\LoginForm;
-use Yiisoft\Form\Tests\Stub\ValidatorMock;
-use Yiisoft\Validator\Rule\Required;
+use Yiisoft\Form\Tests\TestSupport\Form\FormWithNestedAttribute;
+use Yiisoft\Form\Tests\TestSupport\Form\LoginForm;
+use Yiisoft\Form\Tests\TestSupport\Validator\ValidatorMock;
 use Yiisoft\Validator\ValidatorInterface;
+
 use function str_repeat;
 
-require __DIR__ . '/Stub/NonNamespacedForm.php';
+require __DIR__ . '/TestSupport/Form/NonNamespacedForm.php';
 
 final class FormModelTest extends TestCase
 {
@@ -66,7 +68,7 @@ final class FormModelTest extends TestCase
         $this->assertEquals(true, $form->getAttributeValue('rememberMe'));
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Undefined property: "Yiisoft\Form\Tests\Stub\LoginForm::noExist".');
+        $this->expectExceptionMessage('Undefined property: "Yiisoft\Form\Tests\TestSupport\Form\LoginForm::noExist".');
         $form->getAttributeValue('noExist');
     }
 
@@ -120,6 +122,22 @@ final class FormModelTest extends TestCase
         ];
 
         $this->assertEquals($expected, $form->getAttributeLabels());
+    }
+
+    public function testGetAttributePlaceHolder(): void
+    {
+        $form = new LoginForm();
+
+        $this->assertEquals('Type Usernamer or Email.', $form->getAttributePlaceHolder('login'));
+        $this->assertEquals('Type Password.', $form->getAttributePlaceHolder('password'));
+        $this->assertEmpty($form->getAttributePlaceHolder('noExist'));
+    }
+
+    public function testGetNestedAttributePlaceHolder(): void
+    {
+        $form = new FormWithNestedAttribute();
+
+        $this->assertEquals('Type Usernamer or Email.', $form->getAttributePlaceHolder('user.login'));
     }
 
     public function testErrorSummary(): void
@@ -308,6 +326,18 @@ final class FormModelTest extends TestCase
         );
     }
 
+    public function testPublicAttributes()
+    {
+        $form = new class () extends FormModel {
+            public int $int = 1;
+        };
+        $form->load(['int' => '2']);
+        $this->assertSame(2, $form->getAttributeValue('int'));
+
+        $form->setAttribute('int', 1);
+        $this->assertSame(1, $form->getAttributeValue('int'));
+    }
+
     private function createValidatorMock(): ValidatorInterface
     {
         return new ValidatorMock();
@@ -323,48 +353,5 @@ final class CustomFormNameForm extends FormModel
     public function getFormName(): string
     {
         return 'my-best-form-name';
-    }
-}
-
-final class FormWithNestedAttribute extends FormModel
-{
-    private ?int $id = null;
-    private ?LoginForm $user = null;
-
-    public function __construct()
-    {
-        $this->user = new LoginForm();
-        parent::__construct();
-    }
-
-    public function getAttributeLabels(): array
-    {
-        return [
-            'id' => 'ID',
-        ];
-    }
-
-    public function getAttributeHints(): array
-    {
-        return [
-            'id' => 'Readonly ID',
-        ];
-    }
-
-    public function getRules(): array
-    {
-        return [
-            'id' => Required::rule(),
-        ];
-    }
-
-    public function setUserLogin(string $login): void
-    {
-        $this->user->login('admin');
-    }
-
-    public function getUserLogin(): ?string
-    {
-        return $this->user->getLogin();
     }
 }

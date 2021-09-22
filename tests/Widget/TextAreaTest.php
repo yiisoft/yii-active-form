@@ -4,203 +4,126 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\TypeForm;
 use Yiisoft\Form\Widget\TextArea;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class TextAreaTest extends TestCase
 {
-    public function testTextArea(): void
-    {
-        $data = new PersonalForm();
+    private TypeForm $formModel;
 
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->run();
-        $this->assertEquals($expected, $html);
+    public function testCols(): void
+    {
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" cols="50"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->cols(50)->render(),
+        );
     }
 
-    public function testTextAreaOptions(): void
+    public function testDirname(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" class="customClass" name="PersonalForm[address]" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address', ['class' => 'customClass'])
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" dirname="test.dir"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->dirname('test.dir')->render(),
+        );
     }
 
-    public function testTextAreaAutofocus(): void
+    public function testDirnameException(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" autofocus placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->autofocus()
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The value cannot be empty.');
+        TextArea::widget()->config($this->formModel, 'string')->dirname('')->render();
     }
 
-    public function testTextAreaDisabled(): void
+    public function testForm(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" disabled placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->disabled()
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" form="form-id"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->form('form-id')->render(),
+        );
     }
 
-    public function testTextAreaForm(): void
+    public function testImmutability(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" form="form-id" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->form('form-id')
-            ->run();
-        $this->assertEquals($expected, $html);
+        $textArea = TextArea::widget();
+        $this->assertNotSame($textArea, $textArea->cols(0));
+        $this->assertNotSame($textArea, $textArea->dirname('test.dir'));
+        $this->assertNotSame($textArea, $textArea->form(''));
+        $this->assertNotSame($textArea, $textArea->maxlength(0));
+        $this->assertNotSame($textArea, $textArea->placeholder(''));
+        $this->assertNotSame($textArea, $textArea->readOnly());
+        $this->assertNotSame($textArea, $textArea->rows(0));
+        $this->assertNotSame($textArea, $textArea->wrap('hard'));
     }
 
-    public function testTextAreaMinLength(): void
+    public function testMaxLength(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" minlength="10" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->minlength(10)
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" maxlength="100"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->maxLength(100)->render(),
+        );
     }
 
-    public function testTextAreaMaxLength(): void
+    public function testPlaceholder(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" maxlength="50" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->maxlength(50)
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" placeholder="PlaceHolder Text"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->placeholder('PlaceHolder Text')->render(),
+        );
     }
 
-    public function testTextAreaNoPlaceholder(): void
+    public function testRender(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->noPlaceholder()
-            ->run();
-        $this->assertEquals($expected, $html);
-    }
-
-    public function testTextAreaPlaceholder(): void
-    {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" placeholder="Home address."></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->placeholder('Home address.')
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->render(),
+        );
     }
 
     public function testTextAreaReadOnly(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" readonly placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->readOnly()
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" readonly></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->readOnly()->render(),
+        );
     }
 
-    public function testTextAreaSpellCheck(): void
+    public function testValueException(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" spellcheck placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->spellcheck()
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('TextArea widget must be a string.');
+        $html = TextArea::widget()->config($this->formModel, 'array')->render();
     }
 
-    public function testTextAreaRequired(): void
+    public function testWrap(): void
     {
-        $data = new PersonalForm();
+        /** hard value */
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" wrap="hard"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->wrap()->render(),
+        );
 
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" required placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->required()
-            ->run();
-        $this->assertEquals($expected, $html);
+        /** soft value */
+        $this->assertSame(
+            '<textarea id="typeform-string" name="TypeForm[string]" wrap="soft"></textarea>',
+            TextArea::widget()->config($this->formModel, 'string')->wrap('soft')->render(),
+        );
     }
 
-    public function testTextAreaTabIndex(): void
+    public function testWrapException(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" tabindex="0" placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->tabIndex()
-            ->run();
-        $this->assertEquals($expected, $html);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid wrap value. Valid values are: hard, soft.');
+        TextArea::widget()->config($this->formModel, 'string')->wrap('exception');
     }
 
-    public function testTextAreaTitle(): void
+    protected function setUp(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<textarea id="personalform-address" name="PersonalForm[address]" title="Enter the city, municipality, avenue, house or apartment number." placeholder="Address"></textarea>
-HTML;
-        $html = TextArea::widget()
-            ->config($data, 'address')
-            ->title('Enter the city, municipality, avenue, house or apartment number.')
-            ->run();
-        $this->assertEquals($expected, $html);
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new TypeForm();
     }
 }

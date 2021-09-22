@@ -4,82 +4,43 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\Stub\ValidatorMock;
-use Yiisoft\Form\Tests\TestCase;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\PersonalForm;
+use Yiisoft\Form\Tests\TestSupport\TestTrait;
+use Yiisoft\Form\Tests\TestSupport\Validator\ValidatorMock;
 use Yiisoft\Form\Widget\Field;
+use Yiisoft\Test\Support\Container\SimpleContainer;
 use Yiisoft\Validator\ValidatorInterface;
+use Yiisoft\Widget\WidgetFactory;
 
 final class FieldErrorTest extends TestCase
 {
-    public function testFieldError(): void
+    use TestTrait;
+
+    private PersonalForm $formModel;
+
+    public function testTabularErrors(): void
     {
         $validator = $this->createValidatorMock();
-        $data = new PersonalForm();
-        $data->name('yii');
-
-        $validator->validate($data);
+        $this->formModel->setAttribute('name', 'sam');
+        $validator->validate($this->formModel);
 
         $expected = <<<'HTML'
-<div class="form-group field-personalform-name">
-<label class="control-label required" for="personalform-name">Name</label>
-<input type="text" id="personalform-name" class="form-control has-error" name="PersonalForm[name]" value="yii" aria-invalid="true" placeholder="Name">
-<div class="hint-block">Write your first name.</div>
-<div class="help-block">Is too short.</div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'name')
-            ->label(true)
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        <div>
+        <label for="personalform-0-name">Name</label>
+        <input type="text" id="personalform-0-name" name="PersonalForm[0][name]" value="sam">
+        <div>Write your first name.</div>
+        <div>Is too short.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE($expected, Field::widget()->config($this->formModel, '[0]name')->render());
     }
 
-    public function testFieldErrorOptions(): void
+    protected function setUp(): void
     {
-        $validator = $this->createValidatorMock();
-        $data = new PersonalForm();
-        $data->name('yii');
-
-        $validator->validate($data);
-
-        $expected = <<<'HTML'
-<div class="form-group field-personalform-name">
-<label class="control-label required" for="personalform-name">Name</label>
-<input type="text" id="personalform-name" class="form-control has-error" name="PersonalForm[name]" value="yii" aria-invalid="true" placeholder="Name">
-<div class="hint-block">Write your first name.</div>
-<div class="help-block errorTestMe">Is too short.</div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'name')
-            ->label(true)
-            ->error(['class' => 'errorTestMe'])
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
-    }
-
-    public function testFieldsTabularInputErrors(): void
-    {
-        $validator = $this->createValidatorMock();
-        $data = new PersonalForm();
-        $data->name('yii');
-
-        $validator->validate($data);
-
-        $expected = <<<'HTML'
-<div class="form-group field-personalform-0-name">
-<label class="control-label" for="personalform-0-name">Name</label>
-<input type="text" id="personalform-0-name" class="form-control has-error" name="PersonalForm[0][name]" value="yii" placeholder="Name">
-
-<div class="help-block">Is too short.</div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, '[0]name')
-            ->label(true)
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new PersonalForm();
     }
 
     private function createValidatorMock(): ValidatorInterface

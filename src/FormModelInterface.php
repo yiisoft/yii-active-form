@@ -9,74 +9,8 @@ use Yiisoft\Validator\DataSetInterface;
 /**
  * FormModelInterface model represents an HTML form: its data, validation and presentation.
  */
-interface FormModelInterface extends DataSetInterface
+interface FormModelInterface extends DataSetInterface, FormMetadataInterface
 {
-    /**
-     * Returns the attribute labels.
-     *
-     * Attribute labels are mainly used for display purpose. For example, given an attribute `firstName`, we can
-     * declare a label `First Name` which is more user-friendly and can be displayed to end users.
-     *
-     * By default an attribute label is generated automatically. This method allows you to
-     * explicitly specify attribute labels.
-     *
-     * Note, in order to inherit labels defined in the parent class, a child class needs to merge the parent labels
-     * with child labels using functions such as `array_merge()`.
-     *
-     * @return array attribute labels (name => label)
-     */
-    public function getAttributeLabels(): array;
-
-    /**
-     * Returns the text label for the specified attribute.
-     *
-     * @param string $attribute the attribute name.
-     *
-     * @return string the attribute label.
-     *
-     * {@see getAttributeLabels()}
-     */
-    public function getAttributeLabel(string $attribute): string;
-
-    /**
-     * Returns the attribute hints.
-     *
-     * Attribute hints are mainly used for display purpose. For example, given an attribute `isPublic`, we can declare
-     * a hint `Whether the post should be visible for not logged in users`, which provides user-friendly description of
-     * the attribute meaning and can be displayed to end users.
-     *
-     * Unlike label hint will not be generated, if its explicit declaration is omitted.
-     *
-     * Note, in order to inherit hints defined in the parent class, a child class needs to merge the parent hints with
-     * child hints using functions such as `array_merge()`.
-     *
-     * @return array attribute hints (name => hint)
-     */
-    public function getAttributeHints(): array;
-
-    /**
-     * Returns the text hint for the specified attribute.
-     *
-     * @param string $attribute the attribute name.
-     *
-     * @return string the attribute hint.
-     *
-     * {@see getAttributeHints()}
-     */
-    public function getAttributeHint(string $attribute): string;
-
-    /**
-     * Returns a value indicating whether the attribute is required.
-     *
-     * This is determined by checking if the attribute is associated with a {@see \Yiisoft\Validator\Rule\Required}
-     * validation rule.
-     *
-     * @param string $attribute attribute name.
-     *
-     * @return bool whether the attribute is required.
-     */
-    public function isAttributeRequired(string $attribute): bool;
-
     /**
      * Add error for the specified attribute.
      *
@@ -84,6 +18,24 @@ interface FormModelInterface extends DataSetInterface
      * @param string $error attribute error message.
      */
     public function addError(string $attribute, string $error): void;
+
+    /**
+     * Returns the errors for single attribute.
+     *
+     * @param string $attribute attribute name. Use null to retrieve errors for all attributes.
+     *
+     * @return array
+     */
+    public function getError(string $attribute): array;
+
+    /**
+     * Returns the value for the specified attribute.
+     *
+     * @param string $attribute
+     *
+     * @return iterable|object|scalar|Stringable|null
+     */
+    public function getAttributeValue(string $attribute);
 
     /**
      * Returns the errors for all attributes.
@@ -110,15 +62,6 @@ interface FormModelInterface extends DataSetInterface
     public function getErrors(): array;
 
     /**
-     * Returns the errors for single attribute.
-     *
-     * @param string $attribute attribute name. Use null to retrieve errors for all attributes.
-     *
-     * @return array
-     */
-    public function getError(string $attribute): array;
-
-    /**
      * Returns the errors for all attributes as a one-dimensional array.
      *
      * @param bool $showAllErrors boolean, if set to true every error message for each attribute will be shown otherwise
@@ -132,13 +75,16 @@ interface FormModelInterface extends DataSetInterface
     public function getErrorSummary(bool $showAllErrors): array;
 
     /**
-     * Returns a value indicating whether there is any validation error.
+     * Returns the first error of the specified attribute.
      *
-     * @param string|null $attribute attribute name. Use null to check all attributes.
+     * @param string $attribute attribute name.
      *
-     * @return bool whether there is any error.
+     * @return string the error message. Empty string is returned if there is no error.
+     *
+     * {@see getErrors()}
+     * {@see getFirstErrors()}
      */
-    public function hasErrors(?string $attribute = null): bool;
+    public function getFirstError(string $attribute): string;
 
     /**
      * Returns the first error of every attribute in the model.
@@ -150,18 +96,6 @@ interface FormModelInterface extends DataSetInterface
      * {@see getFirstError()}
      */
     public function getFirstErrors(): array;
-
-    /**
-     * Returns the first error of the specified attribute.
-     *
-     * @param string $attribute attribute name.
-     *
-     * @return string the error message. Empty string is returned if there is no error.
-     *
-     * {@see getErrors()}
-     * {@see getFirstErrors()}
-     */
-    public function getFirstError(string $attribute): string;
 
     /**
      * Returns the form name that this model class should use.
@@ -182,31 +116,6 @@ interface FormModelInterface extends DataSetInterface
      * {@see load()}
      */
     public function getFormName(): string;
-
-    /**
-     * Populates the model with input data.
-     *
-     * which, with `load()` can be written as:
-     *
-     * ```php
-     * $body = $request->getParsedBody();
-     * $method = $request->getMethod();
-     *
-     * if ($method === Method::POST && $loginForm->load($body)) {
-     *     // handle success
-     * }
-     * ```
-     *
-     * `load()` gets the `'FormName'` from the {@see getFormName()} method (which you may override), unless the
-     * `$formName` parameter is given. If the form name is empty string, `load()` populates the model with the whole of
-     * `$data` instead of `$data['FormName']`.
-     *
-     * @param array $data the data array to load, typically server request attributes.
-     * @param string|null $formName scope from which to get data
-     *
-     * @return bool whether `load()` found the expected form in `$data`.
-     */
-    public function load(array $data, ?string $formName = null): bool;
 
     /**
      * Returns the validation rules for attributes.
@@ -243,12 +152,13 @@ interface FormModelInterface extends DataSetInterface
     public function getRules(): array;
 
     /**
-     * Set specified attribute
+     * Returns a value indicating whether there is any validation error.
      *
-     * @param string $name of the attribute to set
-     * @param mixed $value value
+     * @param string|null $attribute attribute name. Use null to check all attributes.
+     *
+     * @return bool whether there is any error.
      */
-    public function setAttribute(string $name, $value): void;
+    public function hasErrors(?string $attribute = null): bool;
 
     /**
      * This method allows to know if the validation was executed or not in the model.
@@ -256,4 +166,37 @@ interface FormModelInterface extends DataSetInterface
      * @return bool If the model was validated.
      */
     public function isValidated(): bool;
+
+    /**
+     * Populates the model with input data.
+     *
+     * which, with `load()` can be written as:
+     *
+     * ```php
+     * $body = $request->getParsedBody();
+     * $method = $request->getMethod();
+     *
+     * if ($method === Method::POST && $loginForm->load($body)) {
+     *     // handle success
+     * }
+     * ```
+     *
+     * `load()` gets the `'FormName'` from the {@see getFormName()} method (which you may override), unless the
+     * `$formName` parameter is given. If the form name is empty string, `load()` populates the model with the whole of
+     * `$data` instead of `$data['FormName']`.
+     *
+     * @param array $data the data array to load, typically server request attributes.
+     * @param string|null $formName scope from which to get data
+     *
+     * @return bool whether `load()` found the expected form in `$data`.
+     */
+    public function load(array $data, ?string $formName = null): bool;
+
+    /**
+     * Set specified attribute
+     *
+     * @param string $name of the attribute to set
+     * @param iterable|object|scalar|Stringable|null $value
+     */
+    public function setAttribute(string $name, $value): void;
 }

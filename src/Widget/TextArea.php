@@ -4,111 +4,60 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Widget;
 
-use Yiisoft\Arrays\ArrayHelper;
-use Yiisoft\Form\FormModelInterface;
+use InvalidArgumentException;
 use Yiisoft\Form\Helper\HtmlForm;
-use Yiisoft\Html\Html;
+use Yiisoft\Form\Widget\Attribute\CommonAttributes;
+use Yiisoft\Form\Widget\Attribute\ModelAttributes;
+use Yiisoft\Html\Tag\Textarea as TextAreaTag;
 use Yiisoft\Widget\Widget;
 
+/**
+ * Generates a textarea tag for the given form attribute.
+ *
+ * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html
+ */
 final class TextArea extends Widget
 {
-    private ?string $id = null;
-    private FormModelInterface $data;
-    private string $attribute;
-    private array $options = [];
-    private string $charset = 'UTF-8';
-    private bool $noPlaceholder = false;
+    use CommonAttributes;
+    use ModelAttributes;
+
+    private string $dirname = '';
+    private string $wrap = '';
 
     /**
-     * Generates a textarea tag for the given form attribute.
+     * The expected maximum number of characters per line of text for the UA to show.
      *
-     * @return string the generated textarea tag.
+     * @param int $value Positive integer.
+     *
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.cols
      */
-    public function run(): string
+    public function cols(int $value): self
     {
         $new = clone $this;
+        $new->attributes['cols'] = $value;
+        return $new;
+    }
 
-        if ($new->noPlaceholder === false) {
-            $new->setPlaceholder();
+    /**
+     * Enables submission of a value for the directionality of the element, and gives the name of the field that
+     * contains that value.
+     *
+     * @param string $value Any string that is not empty.
+     *
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.dirname
+     */
+    public function dirname(string $value): self
+    {
+        if (empty($value)) {
+            throw new InvalidArgumentException('The value cannot be empty.');
         }
 
-        if (!empty($new->getId())) {
-            $new->options['id'] = $new->getId();
-        }
-
-        $encode = ArrayHelper::remove($new->options, 'encode', true);
-
-        return Html::textarea($new->getName(), $new->getValue())
-            ->attributes($new->options)
-            ->encode($encode)
-            ->render();
-    }
-
-    /**
-     * Set form model, name and options for the widget.
-     *
-     * @param FormModelInterface $data Form model.
-     * @param string $attribute Form model property this widget is rendered for.
-     * @param array $options The HTML attributes for the widget container tag.
-     * See {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
-     *
-     * @return self
-     */
-    public function config(FormModelInterface $data, string $attribute, array $options = []): self
-    {
         $new = clone $this;
-        $new->data = $data;
-        $new->attribute = $attribute;
-        $new->options = $options;
-        return $new;
-    }
-
-    /**
-     * Focus on the control (put cursor into it) when the page loads.
-     * Only one form element could be in focus at the same time.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function autofocus(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['autofocus'] = $value;
-        return $new;
-    }
-
-    /**
-     * Set the character set used to generate the widget id. See {@see HtmlForm::getInputId()}.
-     *
-     * @param string $value
-     *
-     * @return self
-     */
-    public function charset(string $value): self
-    {
-        $new = clone $this;
-        $new->charset = $value;
-        return $new;
-    }
-
-    /**
-     * Set whether the element is disabled or not.
-     *
-     * If this attribute is set to `true`, the element is disabled. Disabled elements are usually drawn with grayed-out
-     * text.
-     * If the element is disabled, it does not respond to user actions, it cannot be focused, and the command event
-     * will not fire. In the case of form elements, it will not be submitted. Do not set the attribute to true, as
-     * this will suggest you can set it to false to enable the element again, which is not the case.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function disabled(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['disabled'] = $value;
+        $new->dirname = $value;
         return $new;
     }
 
@@ -118,29 +67,14 @@ final class TextArea extends Widget
      *
      * @param string $value
      *
-     * @return self
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.form
      */
     public function form(string $value): self
     {
         $new = clone $this;
-        $new->options['form'] = $value;
-        return $new;
-    }
-
-    /**
-     * The minimum number of characters (as UTF-16 code units) the user can enter into the text input.
-     *
-     * This must be an non-negative integer value smaller than or equal to the value specified by maxlength.
-     * If no minlength is specified, or an invalid value is specified, the text input has no minimum length.
-     *
-     * @param int $value
-     *
-     * @return self
-     */
-    public function minlength(int $value): self
-    {
-        $new = clone $this;
-        $new->options['minlength'] = $value;
+        $new->attributes['form'] = $value;
         return $new;
     }
 
@@ -150,28 +84,16 @@ final class TextArea extends Widget
      *
      * If no maxlength is specified, or an invalid value is specified, the tag input has no maximum length.
      *
-     * @param int $value
+     * @param int $value Positive integer.
      *
-     * @return self
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.maxlength
      */
     public function maxlength(int $value): self
     {
         $new = clone $this;
-        $new->options['maxlength'] = $value;
-        return $new;
-    }
-
-    /**
-     * Allows you to disable placeholder.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function noPlaceholder(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->noPlaceholder = $value;
+        $new->attributes['maxlength'] = $value;
         return $new;
     }
 
@@ -180,12 +102,14 @@ final class TextArea extends Widget
      *
      * @param string $value
      *
-     * @return self
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.placeholder
      */
     public function placeholder(string $value): self
     {
         $new = clone $this;
-        $new->options['placeholder'] = $value;
+        $new->attributes['placeholder'] = $value;
         return $new;
     }
 
@@ -196,118 +120,81 @@ final class TextArea extends Widget
      *
      * @param bool $value
      *
-     * @return self
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.readonly
      */
-    public function readOnly(bool $value = true): self
+    public function readonly(bool $value = true): self
     {
         $new = clone $this;
-        $new->options['readonly'] = $value;
+        $new->attributes['readonly'] = $value;
         return $new;
     }
 
     /**
-     * Spellcheck is a global attribute which is used to indicate whether or not to enable spell checking for an
-     * element.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function spellcheck(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['spellcheck'] = $value;
-        return $new;
-    }
-
-    /**
-     * If it is required to fill in a value in order to submit the form.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function required(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['required'] = $value;
-        return $new;
-    }
-
-    /**
-     * The tabindex global attribute indicates that its element can be focused, and where it participates in sequential
-     * keyboard navigation (usually with the Tab key, hence the name).
-     *
-     * It accepts an integer as a value, with different results depending on the integer's value:
-     *
-     * - A negative value (usually tabindex="-1") means that the element is not reachable via sequential keyboard
-     * navigation, but could be focused with Javascript or visually. It's mostly useful to create accessible widgets
-     * with JavaScript.
-     * - tabindex="0" means that the element should be focusable in sequential keyboard navigation, but its order is
-     * defined by the document's source order.
-     * - A positive value means the element should be focusable in sequential keyboard navigation, with its order
-     * defined by the value of the number. That is, tabindex="4" is focused before tabindex="5", but after tabindex="3".
+     * The number of lines of text for the UA to show.
      *
      * @param int $value
      *
-     * @return self
+     * @return static
+     *
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.rows
      */
-    public function tabIndex(int $value = 0): self
+    public function rows(int $value): self
     {
         $new = clone $this;
-        $new->options['tabindex'] = $value;
+        $new->attributes['rows'] = $value;
         return $new;
     }
 
     /**
-     * The title global attribute contains text representing advisory information related to the element it belongs to.
+     * @param string $value Contains the hard and soft values.
+     * `hard` Instructs the UA to insert line breaks into the submitted value of the textarea such that each line has no
+     *  more characters than the value specified by the cols attribute.
+     * `soft` Instructs the UA to add no line breaks to the submitted value of the textarea.
      *
-     * @param string $value
+     * @return static
      *
-     * @return self
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.wrap.hard
+     * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/textarea.html#textarea.attrs.wrap.soft
      */
-    public function title(string $value): self
+    public function wrap(string $value = 'hard'): self
     {
+        if (!in_array($value, ['hard', 'soft'])) {
+            throw new InvalidArgumentException('Invalid wrap value. Valid values are: hard, soft.');
+        }
+
         $new = clone $this;
-        $new->options['title'] = $value;
+        $new->wrap = $value;
         return $new;
     }
 
-    private function getId(): string
+    /**
+     * @return string the generated textarea tag.
+     */
+    protected function run(): string
     {
-        $id = $this->options['id'] ?? $this->id;
+        $new = clone $this;
 
-        if ($id === null) {
-            $id = HtmlForm::getInputId($this->data, $this->attribute, $this->charset);
+        $value = HtmlForm::getAttributeValue($new->getFormModel(), $new->attribute);
+
+        if (!is_string($value)) {
+            throw new InvalidArgumentException('TextArea widget must be a string.');
         }
 
-        return $id !== false ? (string) $id : '';
-    }
-
-    private function getName(): string
-    {
-        return ArrayHelper::remove($this->options, 'name', HtmlForm::getInputName($this->data, $this->attribute));
-    }
-
-    private function getValue()
-    {
-        $value = HtmlForm::getAttributeValue($this->data, $this->attribute);
-        if ($value !== null && is_scalar($value)) {
-            $value = (string)$value;
+        if ($new->dirname !== '') {
+            $new->attributes['dirname'] = $new->dirname;
         }
 
-        return ArrayHelper::remove(
-            $this->options,
-            'value',
-            $value
-        );
-    }
-
-    private function setPlaceholder(): void
-    {
-        if (!isset($this->options['placeholder'])) {
-            $attributeName = HtmlForm::getAttributeName($this->attribute);
-            $this->options['placeholder'] = $this->data->getAttributeLabel($attributeName);
+        if ($new->wrap !== '') {
+            $new->attributes['wrap'] = $new->wrap;
         }
+
+        return TextAreaTag::tag()
+            ->attributes($new->attributes)
+            ->id($new->getId())
+            ->name(HtmlForm::getInputName($new->getFormModel(), $new->attribute))
+            ->value($value)
+            ->render();
     }
 }

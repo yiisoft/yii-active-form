@@ -4,65 +4,62 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\Tests\TestSupport\Form\PersonalForm;
+use Yiisoft\Form\Tests\TestSupport\TestTrait;
 use Yiisoft\Form\Widget\Field;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class FieldLabelTest extends TestCase
 {
-    public function testFieldLabel(): void
+    use TestTrait;
+
+    private PersonalForm $formModel;
+
+    public function testAnyLabel(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-email">
-<label class="control-label" for="personalform-email">Email</label>
-<input type="text" id="personalform-email" class="form-control" name="PersonalForm[email]" placeholder="Email">
+        <div>
+        <input type="text" id="personalform-email" name="PersonalForm[email]" value>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'email')->label(['label' => false])->render(),
+        );
+    }
 
-<div class="help-block"></div>
-</div>
-HTML;
+    public function testLabelCustom(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label class="test-class" for="personalform-email">Email:</label>
+        <input type="text" id="personalform-email" name="PersonalForm[email]" value>
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'email')
-            ->run();
+            ->config($this->formModel, 'email')
+            ->label(['class' => 'test-class', 'label' => 'Email:'])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
     }
 
-    public function testFieldLabelCustom(): void
+    public function testRender(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-email">
-<label class="control-label labelTestMe" for="personalform-email">Email:</label>
-<input type="text" id="personalform-email" class="form-control" name="PersonalForm[email]" placeholder="Email">
-
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'email')
-            ->label(true, ['class' => 'labelTestMe'], 'Email:')
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        <div>
+        <label for="personalform-email">Email</label>
+        <input type="text" id="personalform-email" name="PersonalForm[email]" value>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE($expected, Field::widget()->config($this->formModel, 'email')->render());
     }
 
-    public function testFieldAnyLabel(): void
+    protected function setUp(): void
     {
-        $data = new PersonalForm();
-
-        $expected = <<<'HTML'
-<div class="form-group field-personalform-email">
-
-<input type="text" id="personalform-email" class="form-control" name="PersonalForm[email]" placeholder="Email">
-
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'email')
-            ->label(false)
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new PersonalForm();
     }
 }

@@ -4,129 +4,39 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Widget;
 
-use Yiisoft\Form\FormModelInterface;
+use InvalidArgumentException;
+use Yiisoft\Form\Helper\HtmlForm;
+use Yiisoft\Form\Widget\Attribute\CommonAttributes;
+use Yiisoft\Form\Widget\Attribute\ModelAttributes;
+use Yiisoft\Html\Tag\Input\Radio as RadioTag;
 use Yiisoft\Widget\Widget;
 
+/**
+ * The input element with a type attribute whose value is "radio" represents a selection of one item from a list of
+ * items (a radio button).
+ *
+ * @link https://www.w3.org/TR/2012/WD-html-markup-20120329/input.radio.html
+ */
 final class Radio extends Widget
 {
-    private ?string $id = null;
-    private FormModelInterface $data;
-    private string $attribute;
-    private array $options = [];
-    private string $charset = 'UTF-8';
+    use CommonAttributes;
+    use ModelAttributes;
+
     private bool $enclosedByLabel = true;
-    private bool $uncheck = true;
+    private string $label = '';
+    private array $labelAttributes = [];
 
     /**
-     * Generates a radio button tag together with a label for the given form attribute.
+     * If the widget should be enclosed by label.
      *
-     * @return string the generated radio button tag.
+     * @param bool $value If the widget should be en closed by label.
+     *
+     * @return static
      */
-    public function run(): string
-    {
-        return BooleanInput::widget()
-            ->type('radio')
-            ->id($this->id)
-            ->config($this->data, $this->attribute, $this->options)
-            ->enclosedByLabel($this->enclosedByLabel)
-            ->uncheck($this->uncheck)
-            ->run();
-    }
-
-    /**
-     * Set form model, name and options for the widget.
-     *
-     * @param FormModelInterface $data Form model.
-     * @param string $attribute Form model property this widget is rendered for.
-     * @param array $options The HTML attributes for the widget container tag.
-     * See {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
-     *
-     * @return self
-     */
-    public function config(FormModelInterface $data, string $attribute, array $options = []): self
+    public function enclosedByLabel(bool $value = true): self
     {
         $new = clone $this;
-        $new->data = $data;
-        $new->attribute = $attribute;
-        $new->options = $options;
-        return $new;
-    }
-
-    /**
-     * Focus on the control (put cursor into it) when the page loads.
-     * Only one form element could be in focus at the same time.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function autofocus(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['autofocus'] = $value;
-        return $new;
-    }
-
-    /**
-     * Set the character set used to generate the widget id. See {@see HtmlForm::getInputId()}.
-     *
-     * @param string $value
-     *
-     * @return self
-     */
-    public function charset(string $value): self
-    {
-        $new = clone $this;
-        $new->charset = $value;
-        return $new;
-    }
-
-    /**
-     * Set whether the element is disabled or not.
-     *
-     * If this attribute is set to `true`, the element is disabled. Disabled elements are usually drawn with grayed-out
-     * text.
-     * If the element is disabled, it does not respond to user actions, it cannot be focused, and the command event
-     * will not fire. In the case of form elements, it will not be submitted. Do not set the attribute to true, as
-     * this will suggest you can set it to false to enable the element again, which is not the case.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function disabled(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['disabled'] = $value;
-        return $new;
-    }
-
-    /**
-     * Specifies the form element the tag input element belongs to. The value of this attribute must be the id
-     * attribute of a {@see Form} element in the same document.
-     *
-     * @param string $value
-     *
-     * @return self
-     */
-    public function form(string $value): self
-    {
-        $new = clone $this;
-        $new->options['form'] = $value;
-        return $new;
-    }
-
-    /**
-     * Set the Id of the widget.
-     *
-     * @param string|null $value
-     *
-     * @return self
-     */
-    public function id(?string $value): self
-    {
-        $new = clone $this;
-        $new->id = $value;
+        $new->enclosedByLabel = $value;
         return $new;
     }
 
@@ -140,12 +50,12 @@ final class Radio extends Widget
      *
      * @param string $value
      *
-     * @return self
+     * @return static
      */
     public function label(string $value): self
     {
         $new = clone $this;
-        $new->options['label'] = $value;
+        $new->label = $value;
         return $new;
     }
 
@@ -156,57 +66,48 @@ final class Radio extends Widget
      *
      * @param array $value
      *
-     * @return self
+     * @return static
      */
-    public function labelOptions(array $value = []): self
+    public function labelAttributes(array $value = []): self
     {
         $new = clone $this;
-        $new->options['labelOptions'] = $value;
+        $new->labelAttributes = $value;
         return $new;
     }
 
     /**
-     * If the widget should be enclosed by label.
+     * Generates a radio button tag together with a label for the given form attribute.
      *
-     * @param bool $value
-     *
-     * @return self
+     * @return string the generated radio button tag.
      */
-    public function enclosedByLabel(bool $value = true): self
+    protected function run(): string
     {
         $new = clone $this;
-        $new->enclosedByLabel = $value;
-        return $new;
-    }
+        $radio = RadioTag::tag();
 
-    /**
-     * If it is required to fill in a value in order to submit the form.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function required(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->options['required'] = $value;
-        return $new;
-    }
+        /** @var bool|float|int|string|null  */
+        $forceUncheckedValue = $new->attributes['forceUncheckedValue'] ?? null;
 
-    /**
-     * The value associated with the uncheck state of the radio.
-     *
-     * When this attribute is present, a hidden input will be generated so that if the radio is not checked and is
-     * submitted, the value of this attribute will still be submitted to the server via the hidden input.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function uncheck(bool $value = true): self
-    {
-        $new = clone $this;
-        $new->uncheck = $value;
-        return $new;
+        unset($new->attributes['forceUncheckedValue']);
+
+        $value = HtmlForm::getAttributeValue($new->getFormModel(), $new->attribute);
+
+        if (is_iterable($value) || is_object($value)) {
+            throw new InvalidArgumentException('Radio widget requires a bool|float|int|string|null value.');
+        }
+
+        if ($new->enclosedByLabel === true) {
+            $label = $new->label !== '' ? $new->label : HtmlForm::getAttributeLabel($new->getFormModel(), $new->attribute);
+            $radio = $radio->label($label, $new->labelAttributes);
+        }
+
+        return $radio
+            ->attributes($new->attributes)
+            ->checked((bool) $value)
+            ->id($new->getId())
+            ->name(HtmlForm::getInputName($new->getFormModel(), $new->attribute))
+            ->uncheckValue($forceUncheckedValue)
+            ->value((int) $value)
+            ->render();
     }
 }

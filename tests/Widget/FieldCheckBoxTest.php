@@ -4,89 +4,258 @@ declare(strict_types=1);
 
 namespace Yiisoft\Form\Tests\Widget;
 
-use Yiisoft\Form\Tests\Stub\PersonalForm;
-use Yiisoft\Form\Tests\TestCase;
+use InvalidArgumentException;
+use PHPUnit\Framework\TestCase;
+use Yiisoft\Form\FormModelInterface;
+use Yiisoft\Form\Tests\TestSupport\Form\TypeForm;
+use Yiisoft\Form\Tests\TestSupport\TestTrait;
 use Yiisoft\Form\Widget\Field;
+use Yiisoft\Test\Support\Container\SimpleContainer;
+use Yiisoft\Widget\WidgetFactory;
 
 final class FieldCheckBoxTest extends TestCase
 {
-    public function testFieldCheckBox(): void
+    use TestTrait;
+
+    private FormModelInterface $formModel;
+
+    public function testAnyLabel(): void
     {
-        $data = new PersonalForm();
-        $data->terms(true);
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-terms">
-
-<input type="hidden" name="PersonalForm[terms]" value="0"><label><input type="checkbox" id="personalform-terms" name="PersonalForm[terms]" value="1" checked> Terms</label>
-
-<div class="help-block"></div>
-</div>
-HTML;
+        <div>
+        <input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0">
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'terms')
-            ->checkbox()
-            ->run();
+            ->config($this->formModel, 'bool')
+            ->checkbox([], false)
+            ->label(['label' => false])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
     }
 
-    public function testFieldCheckBoxUnclosedByLabel(): void
+    public function testEnclosedByLabel(): void
     {
-        $data = new PersonalForm();
-        $data->terms(true);
-
+        // Enclosed by label `false`
         $expected = <<<'HTML'
-<div class="form-group field-personalform-terms">
-<label class="control-label" for="personalform-terms">Terms</label>
-<input type="hidden" name="PersonalForm[terms]" value="0"><input type="checkbox" id="personalform-terms" name="PersonalForm[terms]" value="1" checked>
+        <div>
+        <label for="typeform-bool">Bool</label>
+        <input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0">
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox([], false)->render(),
+        );
 
-<div class="help-block"></div>
-</div>
-HTML;
+        // Enclosed by label `true`
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox([], true)->render(),
+        );
+    }
+
+    public function testEnclosedByLabelWithLabelAttributes(): void
+    {
+        // Enclosed by label `false` with label attributes
+        $expected = <<<'HTML'
+        <div>
+        <label class="test-class" for="typeform-bool">Bool</label>
+        <input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0">
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'terms')
+            ->config($this->formModel, 'bool')
             ->checkbox([], false)
-            ->run();
+            ->label(['class' => 'test-class'])
+            ->render();
+        $this->assertEqualsWithoutLE($expected, $html);
+
+        // Enclosed by label `true` with label attributes
+        $expected = <<<'HTML'
+        <div>
+        <label class="test-class"><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> Bool</label>
+        </div>
+        HTML;
+        $html = Field::widget()
+            ->config($this->formModel, 'bool')
+            ->checkbox(['labelAttributes' => ['class' => 'test-class']])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
     }
 
-    public function testFieldCheckBoxWithLabelCustomUnClosedByLabel(): void
+    public function testEnclosedByLabelCustomText(): void
     {
-        $data = new PersonalForm();
-
+        // Enclosed by label `false` with custom text
         $expected = <<<'HTML'
-<div class="form-group field-personalform-terms">
-<label class="control-label customCssLabel" for="personalform-terms">customLabel</label>
-<input type="hidden" name="PersonalForm[terms]" value="0"><input type="checkbox" id="personalform-terms" name="PersonalForm[terms]" value="1">
-
-<div class="help-block"></div>
-</div>
-HTML;
+        <div>
+        <label for="typeform-bool">test-text-label</label>
+        <input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0">
+        </div>
+        HTML;
         $html = Field::widget()
-            ->config($data, 'terms')
-            ->label(true, ['class' => 'customCssLabel'], 'customLabel')
+            ->config($this->formModel, 'bool')
             ->checkbox([], false)
-            ->run();
+            ->label(['label' => 'test-text-label'])
+            ->render();
         $this->assertEqualsWithoutLE($expected, $html);
+
+        // Enclosed by label `true` with custom text
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> test-text-label</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox(['label' => 'test-text-label'])->render(),
+        );
     }
 
-    public function testFieldCheckBoxAnyLabel(): void
+    public function testForceUncheckedValue(): void
     {
-        $data = new PersonalForm();
-
         $expected = <<<'HTML'
-<div class="form-group field-personalform-terms">
+        <div>
+        <input type="hidden" name="TypeForm[bool]" value="0"><label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox(['forceUncheckedValue' => '0'])->render(),
+        );
+    }
 
-<input type="hidden" name="PersonalForm[terms]" value="0"><input type="checkbox" id="personalform-terms" name="PersonalForm[terms]" value="1">
+    public function testForm(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0" form="form-id"> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox(['form' => 'form-id'])->render(),
+        );
+    }
 
-<div class="help-block"></div>
-</div>
-HTML;
-        $html = Field::widget()
-            ->config($data, 'terms')
-            ->label(false)
-            ->checkbox([], false)
-            ->run();
-        $this->assertEqualsWithoutLE($expected, $html);
+    public function testRender(): void
+    {
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox()->render(),
+        );
+    }
+
+    public function testValues(): void
+    {
+        // value bool false
+        $this->formModel->setAttribute('bool', false);
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="0"> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox()->render(),
+        );
+
+        // value bool true
+        $this->formModel->setAttribute('bool', true);
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-bool" name="TypeForm[bool]" value="1" checked> Bool</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'bool')->checkbox()->render(),
+        );
+
+        // value int 0
+        $this->formModel->setAttribute('int', 0);
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-int" name="TypeForm[int]" value="0"> Int</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'int')->checkbox()->render(),
+        );
+
+        // value int 1
+        $this->formModel->setAttribute('int', 1);
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-int" name="TypeForm[int]" value="1" checked> Int</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'int')->checkbox()->render(),
+        );
+
+        // value string '0'
+        $this->formModel->setAttribute('string', '0');
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-string" name="TypeForm[string]" value="0"> String</label>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->checkbox()->render(),
+        );
+
+        // value string '1'
+        $this->formModel->setAttribute('string', '1');
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-string" name="TypeForm[string]" value="1" checked> String</label>
+        <div>Write your text string.</div>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'string')->checkbox()->render(),
+        );
+
+        // value null
+        $this->formModel->setAttribute('toNull', null);
+        $expected = <<<'HTML'
+        <div>
+        <label><input type="checkbox" id="typeform-tonull" name="TypeForm[toNull]" value="0"> To Null</label>
+        </div>
+        HTML;
+        $this->assertEqualsWithoutLE(
+            $expected,
+            Field::widget()->config($this->formModel, 'toNull')->checkbox()->render(),
+        );
+    }
+
+    public function testValueException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Checkbox widget requires a bool|float|int|string|null value.');
+        Field::widget()->config($this->formModel, 'array')->checkbox()->render();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        WidgetFactory::initialize(new SimpleContainer(), []);
+        $this->formModel = new TypeForm();
     }
 }

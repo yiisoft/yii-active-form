@@ -5,62 +5,29 @@ declare(strict_types=1);
 namespace Yiisoft\Form\Widget;
 
 use Yiisoft\Arrays\ArrayHelper;
-use Yiisoft\Form\FormModelInterface;
 use Yiisoft\Form\Helper\HtmlForm;
-use Yiisoft\Html\Html;
+use Yiisoft\Form\Widget\Attribute\ModelAttributes;
+use Yiisoft\Html\Tag\CustomTag;
 use Yiisoft\Widget\Widget;
 
+/**
+ * The Error widget displays an error message.
+ */
 final class Error extends Widget
 {
-    private FormModelInterface $data;
-    private string $attribute;
-    private array $options = [];
+    use ModelAttributes;
+
+    private string $message = '';
 
     /**
-     * Generates a tag that contains the first validation error of the specified form attribute.
+     * Error message to display.
      *
-     * @return string the generated label tag
+     * @return static
      */
-    public function run(): string
+    public function message(string $value): self
     {
         $new = clone $this;
-
-        $errorSource = ArrayHelper::remove($new->options, 'errorSource');
-
-        if ($errorSource !== null) {
-            $error = $errorSource($new->data, $new->attribute);
-        } else {
-            $error = $new->data->getFirstError(HtmlForm::getAttributeName($new->attribute));
-        }
-
-        $tag = ArrayHelper::remove($new->options, 'tag', 'div');
-        if (empty($tag)) {
-            return $error;
-        }
-
-        $encode = ArrayHelper::remove($new->options, 'encode', true);
-
-        return Html::tag($tag, $error, $new->options)
-            ->encode($encode)
-            ->render();
-    }
-
-    /**
-     * Set form model, name and options for the widget.
-     *
-     * @param FormModelInterface $data Form model.
-     * @param string $attribute Form model property this widget is rendered for.
-     * @param array $options The HTML attributes for the widget container tag.
-     * See {@see \Yiisoft\Html\Html::renderTagAttributes()} for details on how attributes are being rendered.
-     *
-     * @return self
-     */
-    public function config(FormModelInterface $data, string $attribute, array $options = []): self
-    {
-        $new = clone $this;
-        $new->data = $data;
-        $new->attribute = $attribute;
-        $new->options = $options;
+        $new->message = $value;
         return $new;
     }
 
@@ -75,44 +42,62 @@ final class Error extends Widget
      *
      * @param array $value
      *
-     * @return self
+     * @return static
      */
-    public function errorSource(array $value = []): self
+    public function messageCallback(array $value = []): self
     {
         $new = clone $this;
-        $new->options['errorSource'] = $value;
-        return $new;
-    }
-
-    /**
-     * Whether to HTML-encode the error messages.
-     *
-     * Defaults to true. This option is ignored if item option is set.
-     *
-     * @param bool $value
-     *
-     * @return self
-     */
-    public function noEncode(bool $value = false): self
-    {
-        $new = clone $this;
-        $new->options['encode'] = $value;
+        $new->attributes['messageCallback'] = $value;
         return $new;
     }
 
     /**
      * The tag name of the container element.
      *
-     * Null to render error messages without container {@see Html::tag()}.
+     * Empty to render error messages without container {@see Html::tag()}.
      *
-     * @param string|null $value
+     * @param string $value
      *
-     * @return self
+     * @return static
      */
-    public function tag(?string $value = null): self
+    public function tag(string $value = ''): self
     {
         $new = clone $this;
-        $new->options['tag'] = $value;
+        $new->attributes['tag'] = $value;
         return $new;
+    }
+
+    /**
+     * Generates a tag that contains the first validation error of the specified form attribute.
+     *
+     * @return string the generated label tag
+     */
+    protected function run(): string
+    {
+        $new = clone $this;
+
+        /** @var bool */
+        $encode = $new->attributes['encode'] ?? true;
+
+        $error = $new->message !== '' ? $new->message : HtmlForm::getFirstError($new->getFormModel(), $new->attribute);
+
+        /** @var string */
+        $tag = ArrayHelper::remove($new->attributes, 'tag', 'div');
+
+        /** @var array|null */
+        $messageCallback = $new->attributes['messageCallback'] ?? null;
+
+        if ($messageCallback !== null) {
+            /** @var string */
+            $error = $messageCallback($new->getFormModel(), $new->attribute);
+        }
+
+        unset($new->attributes['messageCallback']);
+
+        $html = $tag !== ''
+            ? CustomTag::name($tag)->attributes($new->attributes)->content($error)->encode($encode)->render()
+            : $error;
+
+        return $error !== '' ? $html : '';
     }
 }
